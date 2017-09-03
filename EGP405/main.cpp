@@ -1,3 +1,12 @@
+// Lucas Spiker EGP-405: Lab 1
+/* COA:
+ * “We certify that this work is entirely our own.
+ * The assessor of this project may reproduce this project and provide copies to other academic staff,
+ * and/or communicate a copy of this project to a plagiarism-checking service,
+ * which may retain a copy of the project on its database.”
+ */
+
+
 #include <stdio.h>
 #include <string.h>
 #include "RakNet/RakPeerInterface.h"
@@ -5,12 +14,21 @@
 #include "RakNet/BitStream.h"
 #include "RakNet/RakNetTypes.h"  // MessageID
 
-
+// Possible messages our server/client will look for.
 enum GameMessages
 {
-	ID_GAME_MESSAGE_1 = ID_USER_PACKET_ENUM + 1,
-	ID_GAME_MESSAGE_2 = ID_USER_PACKET_ENUM + 2
+	HELLO_MESSAGE = ID_USER_PACKET_ENUM + 1,
+	GOODBYE_MESSAGE = ID_USER_PACKET_ENUM + 2
 };
+
+// The struct that holds the data passed between server and client.
+#pragma pack(push, 1)
+struct DataPacket
+{
+	unsigned char typeId;
+	char message[255];
+};
+#pragma pack(pop)
 
 int main(void)
 {
@@ -79,12 +97,12 @@ int main(void)
 			{
 				printf("Our connection request has been accepted.\n");
 
-				// Use a BitStream to write a custom user message
-				// Bitstreams are easier to use than sending casted structures, and handle endian swapping automatically
-				RakNet::BitStream bsOut;
-				bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_1);
-				bsOut.Write("Hello");
-				peer->Send(&bsOut, HIGH_PRIORITY, RELIABLE_ORDERED, 0, packet->systemAddress, false);
+				// Use the DataPacket struct to send a message
+				DataPacket sOut;
+				sOut.typeId = HELLO_MESSAGE;
+				strcpy(sOut.message, "Hello");
+				peer->Send((char*)&sOut, sizeof(DataPacket), HIGH_PRIORITY, RELIABLE_ORDERED, 0, packet->systemAddress, false);
+
 			}
 				break;
 			case ID_NEW_INCOMING_CONNECTION:
@@ -109,32 +127,30 @@ int main(void)
 					printf("Connection lost.\n");
 				}
 				break;
-			case ID_GAME_MESSAGE_1:
+			case HELLO_MESSAGE:
 			{
-				RakNet::RakString rs;
-				RakNet::BitStream bsIn(packet->data, packet->length, false);
-				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
-				bsIn.Read(rs);
-				printf("%s\n", rs.C_String());
+				// Receive the data into our struct, and print it's contents.
+				DataPacket sIn = *(DataPacket*)packet->data;
+				printf("%s\n", sIn.message);
 
-				RakNet::BitStream bsOut;
-				bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_2);
-				bsOut.Write("Goodbye");
-				peer->Send(&bsOut, HIGH_PRIORITY, RELIABLE_ORDERED, 0, packet->systemAddress, false);
+				// Use our struct to send a reply
+				DataPacket sOut;
+				sOut.typeId = GOODBYE_MESSAGE;
+				strcpy(sOut.message, "Goodbye");
+				peer->Send((char*)&sOut, sizeof(sOut), HIGH_PRIORITY, RELIABLE_ORDERED, 0, packet->systemAddress, false);
 			}
 			break;
-			case ID_GAME_MESSAGE_2:
+			case GOODBYE_MESSAGE:
 			{
-				RakNet::RakString rs;
-				RakNet::BitStream bsIn(packet->data, packet->length, false);
-				bsIn.IgnoreBytes(sizeof(RakNet::MessageID));
-				bsIn.Read(rs);
-				printf("%s\n", rs.C_String());
+				// Receive the data into our struct, and print it's contents.
+				DataPacket sIn = *(DataPacket*)packet->data;
+				printf("%s\n", sIn.message);
 
-				RakNet::BitStream bsOut;
-				bsOut.Write((RakNet::MessageID)ID_GAME_MESSAGE_1);
-				bsOut.Write("Hello");
-				peer->Send(&bsOut, HIGH_PRIORITY, RELIABLE_ORDERED, 0, packet->systemAddress, false);
+				// Use our struct to send a reply
+				DataPacket sOut;
+				sOut.typeId = HELLO_MESSAGE;
+				strcpy(sOut.message, "Hello");
+				peer->Send((char*)&sOut, sizeof(sOut), HIGH_PRIORITY, RELIABLE_ORDERED, 0, packet->systemAddress, false);
 			}
 			break;
 			default:
