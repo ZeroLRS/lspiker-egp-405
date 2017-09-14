@@ -6,7 +6,6 @@
  * which may retain a copy of the project on its database.”
  */
 
-
 #include <stdio.h>
 #include <string.h>
 #include "RakNet/RakPeerInterface.h"
@@ -99,7 +98,6 @@ int main(void)
 		//}
 		printf("Starting the client.\n");
 		peer->Connect(str, serverPort, 0, 0);
-
 	}
 
 	while (1)
